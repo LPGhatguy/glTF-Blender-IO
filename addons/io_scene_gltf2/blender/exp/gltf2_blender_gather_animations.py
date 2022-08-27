@@ -14,6 +14,7 @@
 
 import bpy
 import typing
+from mathutils import Matrix
 
 from io_scene_gltf2.io.com import gltf2_io
 from io_scene_gltf2.blender.exp import gltf2_blender_gather_animation_channels
@@ -188,6 +189,8 @@ def __gather_animation( obj_uuid: int,
     except RuntimeError as error:
         print_console("WARNING", "Animation '{}' could not be exported. Cause: {}".format(name, error))
         return None
+    finally:
+        __reset_pose(blender_object, export_settings)
 
     export_user_extensions('pre_gather_animation_hook', export_settings, animation, blender_action, blender_object)
 
@@ -360,3 +363,13 @@ def __is_armature_action(blender_action) -> bool:
         if is_bone_anim_channel(fcurve.data_path):
             return True
     return False
+
+def __reset_pose(blender_object, export_settings):
+    # Remove the action from the object so the stored action's data isn't removed
+    if blender_object.animation_data and blender_object.animation_data.action:
+        blender_object.animation_data.action = None
+
+    # Reset pose
+    if blender_object.pose and blender_object.pose.bones:
+        for bone in blender_object.pose.bones:
+            bone.matrix_basis = Matrix()
